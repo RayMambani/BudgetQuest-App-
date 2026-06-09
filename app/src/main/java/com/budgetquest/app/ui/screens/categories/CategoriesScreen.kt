@@ -236,12 +236,12 @@ fun CategoryDialog(
                 },
                 enabled = name.isNotBlank() && limit.toDoubleOrNull() != null
             ) {
-                Text(if (isEditing) "UPDATE" else "INITIALIZE", color = NeonCyan, fontWeight = FontWeight.Bold)
+                Text(if (isEditing) "UPDATE" else "ADD", color = NeonCyan, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("ABORT", color = Color.White.copy(alpha = 0.6f))
+                Text("CANCEL", color = Color.White.copy(alpha = 0.6f))
             }
         },
         shape = RoundedCornerShape(24.dp)

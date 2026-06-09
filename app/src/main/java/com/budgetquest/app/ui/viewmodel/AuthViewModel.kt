@@ -54,8 +54,9 @@ class AuthViewModel @Inject constructor(
             val cleanUsername = _username.value.trim()
             val cleanPassword = _password.value.trim()
             
-            if (cleanPassword.length < 6) {
-                _authEvent.emit(AuthResult.Error("Password must be at least 6 characters"))
+            val passwordError = validatePassword(cleanPassword)
+            if (passwordError != null) {
+                _authEvent.emit(AuthResult.Error(passwordError))
                 return@launch
             }
             _isLoading.value = true
@@ -64,6 +65,15 @@ class AuthViewModel @Inject constructor(
             if (success) _authEvent.emit(AuthResult.Success)
             else _authEvent.emit(AuthResult.Error("Username already exists"))
         }
+    }
+
+    private fun validatePassword(password: String): String? {
+        if (password.length < 6) return "Password must be at least 6 characters"
+        if (!password.any { it.isUpperCase() }) return "Password must contain an uppercase letter"
+        if (!password.any { it.isLowerCase() }) return "Password must contain a lowercase letter"
+        if (!password.any { it.isDigit() }) return "Password must contain a number"
+        if (!password.any { !it.isLetterOrDigit() }) return "Password must contain a symbol"
+        return null
     }
 
     sealed class AuthResult {
