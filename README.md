@@ -51,15 +51,17 @@ Instead of being a plain expense tracker, BudgetQuest turns budgeting into a gam
 **Where to see it in the app:** the Dashboard header (level + XP bar + streak), the **Badges** tab, and the XP toast shown after adding an expense.
 **Where to see it in the code:** the scoring rules live in the stateless [GamificationEngine.kt](app/src/main/java/com/budgetquest/app/domain/GamificationEngine.kt) (unit-tested in [GamificationEngineTest.kt](app/src/test/java/com/budgetquest/app/domain/GamificationEngineTest.kt)); the XP/streak award logic on each expense is in [MainViewModel.addExpenseWithXP()](app/src/main/java/com/budgetquest/app/ui/viewmodel/MainViewModel.kt); the badge UI is in [BadgesScreen.kt](app/src/main/java/com/budgetquest/app/ui/screens/badges/BadgesScreen.kt).
 
-### Feature 2 — Receipt Photo Vault (Camera & Gallery attachment)
-Users can attach a photo of a receipt to any expense, captured live with the device **camera** or chosen from the **gallery**. Images are stored locally on the device, so the proof-of-purchase travels with the expense and never leaves the phone.
+### Feature 2 — Visual Progress Rings (colour-coded spending health)
+Each budget category is shown as an animated **circular progress ring** that fills up as the user spends against that category's monthly limit. The ring is more than decorative — its **colour is a live spending-health indicator**:
 
-* Uses Android's `ActivityResultContracts.TakePicture()` for the camera and a document picker for the gallery.
-* Photos are shared securely through a **`FileProvider`** (no insecure `file://` URIs), with runtime **camera-permission** handling.
-* The image location is persisted on the expense via the `imagePath` field of [ExpenseEntity.kt](app/src/main/java/com/budgetquest/app/data/local/entity/ExpenseEntity.kt).
+* **Green** — safe (under 80% of the limit).
+* **Orange** — warning (80%–99% of the limit).
+* **Red** — over budget (100% or more).
 
-**Where to see it in the app:** the **Add Expense** screen → *Attach Receipt Photo* → **Camera** / **Gallery** buttons.
-**Where to see it in the code:** [AddExpenseScreen.kt](app/src/main/java/com/budgetquest/app/ui/screens/expense/AddExpenseScreen.kt) (camera launcher, FileProvider, permission flow); the `FileProvider` is declared in [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
+The percentage spent is drawn in the centre of each ring, and the fill **animates smoothly** to the new value whenever spending changes, giving instant at-a-glance feedback without the user having to read any numbers.
+
+**Where to see it in the app:** the **Dashboard** (a ring per category) and the **Categories** tab.
+**Where to see it in the code:** the ring is a custom Compose component, [`ProgressRing` in ProgressComponents.kt](app/src/main/java/com/budgetquest/app/ui/components/ProgressComponents.kt), drawn with `Canvas`/`drawArc`, animated via `animateFloatAsState`, with the green/orange/red thresholds chosen from the `progress` value; the per-category percentages it renders are computed in [MainViewModel.kt](app/src/main/java/com/budgetquest/app/ui/viewmodel/MainViewModel.kt).
 
 > The full feature catalogue (6 features in total) is also browsable in-app via the **"View All Features"** button on the Dashboard, implemented in [FeaturesScreen.kt](app/src/main/java/com/budgetquest/app/ui/screens/features/FeaturesScreen.kt).
 
