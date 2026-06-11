@@ -35,6 +35,34 @@ The app is fully **offline-first**: all data lives in a local database on the de
 | **Quests** | Goal-style challenges (e.g. "Log expenses for 5 days straight") that reward sustained engagement. |
 | **Secure Local Accounts** | Username/password login with BCrypt-hashed credentials stored on-device. |
 
+---
+
+## ⭐ Our Own Custom Features (what the marker should look for)
+
+Beyond the core budgeting requirements, our team designed and built the following **two custom features**. These are the features described in our design document and are the ones we want the lecturer to focus on.
+
+### Feature 1 — Gamified Progression System (XP, Levels, Streaks & Badges)
+Instead of being a plain expense tracker, BudgetQuest turns budgeting into a game. Every action the user takes feeds a complete progression system:
+
+* **XP & Levels** — logging an expense awards **+50 XP**; every 1000 XP advances the user a level, and each level maps to a themed rank title (**Budget Novice → Frugal Squire → Finance Knight → Financial Expert**).
+* **Daily Streaks** — logging on consecutive days builds a streak, with bonus rewards at 7-day and 30-day milestones; missing a day resets it.
+* **Achievement Badges** — badges such as *Goal Setter*, *Monthly Master* and *Budget Hero* unlock as the user hits behavioural targets.
+
+**Where to see it in the app:** the Dashboard header (level + XP bar + streak), the **Badges** tab, and the XP toast shown after adding an expense.
+**Where to see it in the code:** the scoring rules live in the stateless [GamificationEngine.kt](app/src/main/java/com/budgetquest/app/domain/GamificationEngine.kt) (unit-tested in [GamificationEngineTest.kt](app/src/test/java/com/budgetquest/app/domain/GamificationEngineTest.kt)); the XP/streak award logic on each expense is in [MainViewModel.addExpenseWithXP()](app/src/main/java/com/budgetquest/app/ui/viewmodel/MainViewModel.kt); the badge UI is in [BadgesScreen.kt](app/src/main/java/com/budgetquest/app/ui/screens/badges/BadgesScreen.kt).
+
+### Feature 2 — Receipt Photo Vault (Camera & Gallery attachment)
+Users can attach a photo of a receipt to any expense, captured live with the device **camera** or chosen from the **gallery**. Images are stored locally on the device, so the proof-of-purchase travels with the expense and never leaves the phone.
+
+* Uses Android's `ActivityResultContracts.TakePicture()` for the camera and a document picker for the gallery.
+* Photos are shared securely through a **`FileProvider`** (no insecure `file://` URIs), with runtime **camera-permission** handling.
+* The image location is persisted on the expense via the `imagePath` field of [ExpenseEntity.kt](app/src/main/java/com/budgetquest/app/data/local/entity/ExpenseEntity.kt).
+
+**Where to see it in the app:** the **Add Expense** screen → *Attach Receipt Photo* → **Camera** / **Gallery** buttons.
+**Where to see it in the code:** [AddExpenseScreen.kt](app/src/main/java/com/budgetquest/app/ui/screens/expense/AddExpenseScreen.kt) (camera launcher, FileProvider, permission flow); the `FileProvider` is declared in [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
+
+> The full feature catalogue (6 features in total) is also browsable in-app via the **"View All Features"** button on the Dashboard, implemented in [FeaturesScreen.kt](app/src/main/java/com/budgetquest/app/ui/screens/features/FeaturesScreen.kt).
+
 ## 3. Design Considerations
 
 ### 3.1 Visual Design — "Cyber-Noir"
@@ -75,6 +103,11 @@ D/AuthRepository: login() attempt for username='demo'
 I/AuthRepository: login() succeeded for 'demo'
 I/AuthViewModel: login() success for 'demo'
 ```
+
+### 3.5 App Icon & Image Assets
+The app ships with a custom **adaptive launcher icon** (the BudgetQuest trophy logo), defined in [mipmap-anydpi-v26/ic_launcher.xml](app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml) with a separate foreground ([ic_launcher_logo_foreground](app/src/main/res/drawable/ic_launcher_logo_foreground.xml)) and background layer, plus a round variant for launchers that request one. It is wired up in the manifest via `android:icon` and `android:roundIcon`.
+
+Final in-app image assets are kept in [app/src/main/res/drawable/](app/src/main/res/drawable/): the `app_logo` used on the splash/auth screens, and two complete sets of bottom-navigation icons — a flat set (`ic_nav_*`) and a skeuomorphic set (`ic_skeuo_*`) for the Dashboard, Expenses, Categories, Goals and Badges tabs.
 
 ## 4. Technical Stack
 
