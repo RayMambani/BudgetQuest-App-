@@ -1,5 +1,6 @@
 package com.budgetquest.app.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.budgetquest.app.data.local.entity.CategoryEntity
@@ -14,6 +15,17 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
+/**
+ * The primary ViewModel for the authenticated part of the app (dashboard, expenses,
+ * categories, goals and quests).
+ *
+ * Almost all state is derived reactively: [currentUser] is the root Flow, and the
+ * other streams ([allExpenses], [categories], [categorySpending], etc.) are built
+ * from it with `flatMapLatest`, so when the logged-in user changes every dependent
+ * stream re-subscribes to the correct user's data automatically. Each derived Flow
+ * is converted to a hot [kotlinx.coroutines.flow.StateFlow] with `stateIn` so the
+ * Compose UI always has an immediate current value to render.
+ */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -157,10 +169,17 @@ class MainViewModel @Inject constructor(
     private val _events = MutableSharedFlow<String>()
     val events = _events.asSharedFlow()
 
+    /**
+     * Populates a brand-new account with starter categories and quests so the
+     * dashboard is not empty on first launch. Guarded by [hasAttemptedSeed] so it
+     * runs at most once per ViewModel instance even though [currentUser] may emit
+     * multiple times.
+     */
     private fun seedInitialCategories(user: UserEntity) {
         if (hasAttemptedSeed) return
         hasAttemptedSeed = true
-        
+        Log.d(TAG, "seedInitialCategories() running for userId=${user.id}")
+
         viewModelScope.launch {
             if (user.createdAt == 0L) {
                 authRepository.updateUser(user.copy(createdAt = System.currentTimeMillis()))
@@ -168,6 +187,7 @@ class MainViewModel @Inject constructor(
 
             val currentCategories = expenseRepository.getAllCategories(user.id).first()
             if (currentCategories.isEmpty()) {
+                Log.i(TAG, "Seeding default categories for new user ${user.id}")
                 val initial = listOf(
                     CategoryEntity(name = "Groceries", icon = "shopping_cart", monthlyLimit = 2000.0, userId = user.id),
                     CategoryEntity(name = "Transport", icon = "directions_car", monthlyLimit = 1500.0, userId = user.id),
@@ -197,9 +217,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /** Saves the user's monthly minimum/maximum spending goals. */
     fun updateUserGoals(min: Double, max: Double) {
         viewModelScope.launch {
             currentUser.value?.let { user ->
+                Log.d(TAG, "updateUserGoals() min=$min max=$max for userId=${user.id}")
                 val updatedUser = user.copy(
                     minMonthlyGoal = min,
                     maxMonthlyGoal = max
@@ -209,13 +231,23 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Records a new expense and applies the gamification reward in a single step:
+     * the user earns XP, may level up, and their daily logging streak is updated.
+     * The streak increments only once per calendar day, continues if the previous
+     * activity was yesterday, and otherwise resets to 1.
+     */
     fun addExpenseWithXP(expense: ExpenseEntity) {
         viewModelScope.launch {
-            val user = currentUser.value ?: return@launch
+            val user = currentUser.value ?: run {
+                Log.w(TAG, "addExpenseWithXP() ignored: no logged-in user")
+                return@launch
+            }
+            Log.d(TAG, "addExpenseWithXP() amount=${expense.amount} for userId=${user.id}")
             expenseRepository.insertExpense(expense.copy(userId = user.id))
             _endDateFilter.value = System.currentTimeMillis() // Auto-refresh range to include new expense
             _events.emit("EXPENSE_ADDED")
-            
+
             val currentTimestamp = System.currentTimeMillis()
             
             val lastActivity = Calendar.getInstance().apply { timeInMillis = user.lastActivityDate }
@@ -234,16 +266,18 @@ class MainViewModel @Inject constructor(
                 else -> 1
             }
 
-            val newXp = user.xp + 50
-            val newLevel = (newXp / 1000) + 1
-            
+            val newXp = user.xp + 50          // flat 50 XP reward per logged expense
+            val newLevel = (newXp / 1000) + 1 // every 1000 XP advances one level
+
+            Log.i(TAG, "XP awarded: ${user.xp} -> $newXp, level ${user.level} -> $newLevel, streak ${user.streakCount} -> $newStreak")
+
             val updatedUser = user.copy(
                 xp = newXp,
                 level = newLevel,
                 streakCount = newStreak,
                 lastActivityDate = currentTimestamp
             )
-            
+
             authRepository.updateUser(updatedUser)
         }
     }
@@ -268,21 +302,30 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /** Deletes a category together with all of its expenses to avoid orphaned rows. */
     fun deleteCategory(category: CategoryEntity) {
         viewModelScope.launch {
+            Log.d(TAG, "deleteCategory() id=${category.id} name='${category.name}' (and its expenses)")
             expenseRepository.deleteCategory(category)
             expenseRepository.deleteExpensesByCategory(category.id)
         }
     }
 
+    /** Updates the date window that drives the dashboard charts and filtered lists. */
     fun setDateFilters(start: Long, end: Long) {
+        Log.d(TAG, "setDateFilters() start=$start end=$end")
         _startDateFilter.value = start
         _endDateFilter.value = end
     }
 
     fun logout() {
         viewModelScope.launch {
+            Log.i(TAG, "logout() requested")
             authRepository.logout()
         }
+    }
+
+    companion object {
+        private const val TAG = "MainViewModel"
     }
 }

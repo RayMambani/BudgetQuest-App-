@@ -1,72 +1,155 @@
-# BudgetQuest
+<p align="center">
+  <img src="app/src/main/res/drawable/app_logo.jpg" alt="BudgetQuest logo" width="160"/>
+</p>
 
-[![Generate APK AAB](https://github.com/RayMambani/group-assignment/actions/workflows/build.yml/badge.svg)](https://github.com/RayMambani/group-assignment/actions/workflows/build.yml)
+<h1 align="center">BudgetQuest</h1>
 
-BudgetQuest is a professional finance management application developed with a "Cyber-Noir" design language. It integrates gamification elements—such as levels, experience points (XP), and badges—to incentivize consistent financial tracking and goal attainment.
+<p align="center">
+  <a href="https://github.com/RayMambani/group-assignment/actions/workflows/build.yml">
+    <img src="https://github.com/RayMambani/group-assignment/actions/workflows/build.yml/badge.svg" alt="Generate APK AAB"/>
+  </a>
+</p>
 
-## Key Features
+BudgetQuest is a personal finance management application for Android, built with a **"Cyber-Noir"** design language. It turns the often-tedious habit of expense tracking into a game: users earn experience points (XP), climb levels, build daily streaks, and unlock achievement badges as a reward for staying on top of their money. The goal is behavioural — make consistent budgeting feel rewarding rather than like a chore.
 
-*   **Centralized Dashboard**: Provides real-time expenditure analysis and budget utilization metrics.
-*   **Expense Management**: Streamlined entry system for logging daily transactions with receipt attachment capabilities.
-*   **Budget Categorization**: Dynamic category management with monthly limit tracking and progress visualization.
-*   **Gamified Achievement System**: Progress tracking through experience levels and achievement badges based on spending habits and streaks.
-*   **Real-time Analytics**: Visual data representations for category-wise spending and monthly trends.
+---
 
-## Technical Architecture
+## 1. Purpose of the App
 
-The application is built using modern Android development standards:
+Most people abandon budgeting apps because logging expenses feels like admin with no payoff. BudgetQuest addresses this directly:
 
-*   **Language**: Kotlin
-*   **UI Framework**: Jetpack Compose (Declarative UI)
-*   **Architecture Pattern**: MVVM (Model-View-ViewModel)
-*   **Dependency Injection**: Hilt (Dagger)
-*   **Persistence Layer**: Room Database (SQLite)
-*   **Asynchronous Flow**: Kotlin Coroutines and StateFlow
-*   **Security**: BCrypt for local credential hashing
+* **Make tracking habitual** — every logged expense grants XP and extends a daily streak, borrowing proven engagement loops from mobile games.
+* **Make budgets visible** — a real-time dashboard shows exactly how much of each category's monthly limit has been used.
+* **Make progress tangible** — levels, rank titles ("Budget Novice" → "Financial Expert") and badges give users a long-term sense of growth.
 
-## Development Setup
+The app is fully **offline-first**: all data lives in a local database on the device, so there is no account server, no network dependency, and no privacy trade-off.
+
+## 2. Key Features
+
+| Feature | Description |
+| --- | --- |
+| **Centralized Dashboard** | Real-time expenditure analysis, budget utilisation metrics, and category spending charts. |
+| **Expense Management** | Fast entry for logging daily transactions, filterable by date range. |
+| **Budget Categorization** | Dynamic categories with monthly limits and progress visualisation (limited to four focus categories). |
+| **Gamified Achievements** | XP, levels, daily streaks and badges driven by the spending behaviour itself. |
+| **Quests** | Goal-style challenges (e.g. "Log expenses for 5 days straight") that reward sustained engagement. |
+| **Secure Local Accounts** | Username/password login with BCrypt-hashed credentials stored on-device. |
+
+## 3. Design Considerations
+
+### 3.1 Visual Design — "Cyber-Noir"
+The interface uses a dark, high-contrast palette with neon accents (cyan, purple, pink, green) defined centrally in [Color.kt](app/src/main/java/com/budgetquest/app/ui/theme/Color.kt). A consistent theme is applied through [Theme.kt](app/src/main/java/com/budgetquest/app/ui/theme/Theme.kt), so colour and typography choices live in one place and the whole app restyles from a single source.
+
+### 3.2 Architecture — MVVM + Repository
+The codebase follows a clean, layered **MVVM** structure so that UI, logic, and data are independent and testable:
+
+```
+UI (Jetpack Compose screens)
+        │  observes StateFlow
+ViewModel (AuthViewModel, MainViewModel)   ← UI state + actions
+        │  calls suspend functions
+Repository (AuthRepository, ExpenseRepository)  ← single source of truth
+        │  Room DAO
+Local Database (Room / SQLite)
+```
+
+* **Reactive data flow** — the UI never asks for data; it *observes* Kotlin `Flow`/`StateFlow` streams. When the database changes, the screen updates automatically. See [MainViewModel.kt](app/src/main/java/com/budgetquest/app/ui/viewmodel/MainViewModel.kt), where every stream is derived from the logged-in user with `flatMapLatest`.
+* **Separation of concerns** — repositories are the *only* code that touches the database, so the gamification and UI layers stay free of persistence details.
+* **Pure, testable logic** — scoring rules live in a stateless [GamificationEngine](app/src/main/java/com/budgetquest/app/domain/GamificationEngine.kt) object and are covered by [GamificationEngineTest](app/src/test/java/com/budgetquest/app/domain/GamificationEngineTest.kt).
+
+### 3.3 Security
+Passwords are **never stored or logged in plain text**. The [AuthRepository](app/src/main/java/com/budgetquest/app/data/repository/AuthRepository.kt) hashes every password with **BCrypt** (a deliberately slow, salted algorithm) and only ever compares hashes — even our own logging deliberately omits credential values.
+
+### 3.4 Logging
+The app uses Android's `android.util.Log` throughout the data and ViewModel layers to make its behaviour observable in Logcat. Each class declares its own `TAG`, and log levels are used intentionally:
+
+* `Log.i` — significant lifecycle events (app start, successful login/registration, XP awarded).
+* `Log.d` — routine operations (inserting an expense, applying a date filter).
+* `Log.w` — recoverable problems (empty form fields, failed login, duplicate username).
+
+For example, logging in produces a clear trail:
+```
+I/BudgetQuestApp: BudgetQuest application started and dependency graph initialised
+D/AuthViewModel: login() submitting for 'demo'
+D/AuthRepository: login() attempt for username='demo'
+I/AuthRepository: login() succeeded for 'demo'
+I/AuthViewModel: login() success for 'demo'
+```
+
+## 4. Technical Stack
+
+| Concern | Technology |
+| --- | --- |
+| Language | Kotlin |
+| UI | Jetpack Compose (declarative) |
+| Architecture | MVVM + Repository pattern |
+| Dependency Injection | Hilt (Dagger) |
+| Persistence | Room (SQLite) |
+| Concurrency | Kotlin Coroutines + StateFlow |
+| Password hashing | BCrypt (jBCrypt) |
+| CI/CD | GitHub Actions |
+
+## 5. Use of GitHub
+
+This project is developed and submitted entirely on **GitHub**:
+
+* **Source control** — the complete Kotlin source is version-controlled and pushed to GitHub (no zip files), giving the team a shared history and the ability to track every change.
+* **Collaboration** — group members work against the same `main` branch, with commits documenting each feature and fix.
+* **Documentation** — this README lives in the repository so the documentation travels with the code.
+
+## 6. Use of GitHub Actions (CI/CD)
+
+The repository uses **GitHub Actions** for Continuous Integration. The workflow is defined in [.github/workflows/build.yml](.github/workflows/build.yml) and runs automatically on every push and pull request to `main` (and can also be triggered manually via `workflow_dispatch`).
+
+On each run the pipeline:
+
+1. **Checks out** the repository.
+2. **Sets up JDK 17** (Zulu distribution) with Gradle caching to speed up builds.
+3. **Builds the Debug APK** with `./gradlew assembleDebug` — this acts as an automated check that the code compiles and the app assembles successfully on a clean machine.
+4. **Uploads the APK** as a downloadable build artifact, named with the build date.
+
+This means every change is automatically verified to build, and a ready-to-install APK is always available straight from the Actions tab — no local setup required for reviewers.
+
+## 7. Development Setup
 
 ### Prerequisites
-
-*   Android Studio Flamingo | 2022.2.1 or newer
-*   JDK 17
-*   Android SDK Level 26 (Minimum)
+* Android Studio (Flamingo 2022.2.1 or newer)
+* JDK 17
+* Android SDK Level 26 (minimum)
 
 ### Installation and Execution
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/RayMambani/group-assignment.git
+   ```
+2. **Open in Android Studio** and let Gradle synchronise the dependencies.
+3. **Run** on a connected device or emulator:
+   ```bash
+   ./gradlew installDebug
+   ```
 
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/RayMambani/group-assignment.git
-    ```
-2.  **Project Initialization**:
-    Open the project in Android Studio and allow Gradle to synchronize dependencies.
-3.  **Deployment**:
-    Connect an Android device or emulator and use the `Run` command or execute via terminal:
-    ```bash
-    ./gradlew installDebug
-    ```
+> **Note:** `local.properties` (your local Android SDK path) is machine-specific and intentionally not committed. Android Studio generates it automatically on first open.
 
-## Infrastructure
+## 8. Screenshots
 
-### Automated Build Pipeline (CI/CD)
+> Replace the placeholders below with captures of the running app (Dashboard, Add Expense, Categories, Badges). Save the images under `docs/screenshots/` and reference them here.
 
-The project leverages GitHub Actions for continuous integration. The pipeline is configured to execute on every push to the default branch, performing the following operations:
+| Dashboard | Expenses | Badges |
+| --- | --- | --- |
+| _add image_ | _add image_ | _add image_ |
 
-1.  **Unit Testing**: Automated validation of repository and logic layers.
-2.  **Compilation**: Static analysis and build verification.
-3.  **Artifact Generation**: Production of Debug and Release APKs/AABs, archived as build artifacts.
+## 9. Project Contributors
 
-## Project Contributors
+* **Ray Mambani** — Project Lead
+* **Sandisiwe Manyathi** — Group Member
+* **Kefilwe Mogano** — Group Member
 
-*   **Ray Mambani** - Project Lead
-*   **Sandisiwe Manyathi** - Group Member
-*   **Kefilwe Mogano** - Group Member
+## 10. Video Presentation
 
-## Licensing
+A full walkthrough of the app's features is available here:
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for comprehensive details.
+▶️ **https://youtu.be/a8E8j25oy9k?si=neyjzFO6btsq2sdh**
 
+## 11. Licensing
 
-## Video Presentation Link
-
-https://youtu.be/a8E8j25oy9k?si=neyjzFO6btsq2sdh
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
