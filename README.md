@@ -132,11 +132,15 @@ This means every change is automatically verified to build, and a ready-to-insta
 
 ## 8. Screenshots
 
-> Replace the placeholders below with captures of the running app (Dashboard, Add Expense, Categories, Badges). Save the images under `docs/screenshots/` and reference them here.
+Captured from the app running on an Android emulator.
 
-| Dashboard | Expenses | Badges |
+| Login | Dashboard | Add Expense |
 | --- | --- | --- |
-| _add image_ | _add image_ | _add image_ |
+| <img src="docs/screenshots/01-login.png" width="220"/> | <img src="docs/screenshots/02-dashboard.png" width="220"/> | <img src="docs/screenshots/03-add-expense.png" width="220"/> |
+
+| Categories | Badges & Ranks |
+| --- | --- |
+| <img src="docs/screenshots/04-categories.png" width="220"/> | <img src="docs/screenshots/05-badges.png" width="220"/> |
 
 ## 9. Project Contributors
 
