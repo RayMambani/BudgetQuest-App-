@@ -187,7 +187,7 @@ Captured from the app running on an Android emulator.
 
 A full walkthrough of the app's features is available here:
 
-▶️ **https://youtu.be/a8E8j25oy9k?si=neyjzFO6btsq2sdh**
+▶️ **https://youtu.be/pEvo9aguy3I?si=esV_LtnUYR0HlGLT**
 
 ## 11. Licensing
 
